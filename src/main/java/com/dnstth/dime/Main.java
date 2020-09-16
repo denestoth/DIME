@@ -12,38 +12,33 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Main {
+
+    private static final String DRAW_IO_EXECUTABLE_LOCATION = "\"\"C:\\Program Files\\draw.io\\draw.io.exe\"";
+    private static final String SLIDE_NAME_PATTERN = "name=\"([a-zA-Z0-9\\s-]*)\"";
+
     public static void main(String[] args) {
 
         try {
-            BufferedReader bufferRead = new BufferedReader(new InputStreamReader(System.in));
+            String inputLocation = getSourceFileLocation();
+            String outputFolder = getOutputLocation();
 
-            System.out.println("file path and name");
-            String inputLocation = bufferRead.readLine();
-            System.out.println("output folder");
-            String outputFolder = bufferRead.readLine();
+            List<String> names = getSlideNames(inputLocation);
 
-            String content = Files.readString(Path.of(inputLocation));
-            String inputFileName = new File(inputLocation).getName().replace(".drawio", "");
-            Pattern regexPattern = Pattern.compile("name=\"([a-zA-Z0-9\\s-]*)\"");
-            Matcher matcher = regexPattern.matcher(content);
-
-            List<String> names = new ArrayList<>();
-            Integer i = 0;
-
-            while (matcher.find()) {
-                i++;
-                String counter = createPaddedCounter(i);
-                names.add(counter + " - " + matcher.group(1) + ".jpg");
-            }
+            String inputFileName = getOriginalFileNameWithoutExtension(inputLocation);
 
             for (int j = 0; j < names.size(); j++) {
-                String outputFileName = inputFileName + " - " + names.get(j);
-                String command = String.format("\"\"C:\\Program Files\\draw.io\\draw.io.exe\" -f jpg -x \"%s\" -f jpg -o \"%s\" -p %s\""
+                String outputFileName = String.format("%s - %03d - %s.jpg"
+                    , inputFileName
+                    , j + 1
+                    , names.get(j));
+
+                String command = String.format("%s -f jpg -x \"%s\" -f jpg -o \"%s\" -p %s\""
+                    , DRAW_IO_EXECUTABLE_LOCATION
                     , inputLocation
                     , outputFolder + "\\" + outputFileName
                     , j
                 );
-//                System.out.println(command);
+
                 startCommand(command);
             }
         } catch (Exception e) {
@@ -51,11 +46,36 @@ public class Main {
         }
     }
 
-    private static String createPaddedCounter(int i) {
-        String padding = "";
-        if (i < 100) { padding = "0"; }
-        if (i < 10) { padding = "00"; }
-        return padding + String.valueOf(i);
+    private static String getSourceFileLocation() throws IOException {
+        BufferedReader bufferRead = new BufferedReader(new InputStreamReader(System.in));
+
+        System.out.println("file path and name");
+
+        return bufferRead.readLine();
+    }
+
+    private static String getOutputLocation()  throws IOException {
+        BufferedReader bufferRead = new BufferedReader(new InputStreamReader(System.in));
+
+        System.out.println("output folder");
+
+        return bufferRead.readLine();
+    }
+
+    private static List<String> getSlideNames(String inputLocation) throws IOException {
+        List<String> names = new ArrayList<>();
+        String content = Files.readString(Path.of(inputLocation));
+        Pattern regexPattern = Pattern.compile(SLIDE_NAME_PATTERN);
+        Matcher matcher = regexPattern.matcher(content);
+
+        while (matcher.find()) {
+            names.add(matcher.group(1));
+        }
+        return names;
+    }
+
+    private static String getOriginalFileNameWithoutExtension(String inputLocation) {
+        return new File(inputLocation).getName().replace(".drawio", "");
     }
 
     private static void startCommand(String command) throws IOException {
